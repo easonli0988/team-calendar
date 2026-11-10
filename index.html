@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>團隊共用行事曆</title>
-  <!-- FullCalendar 6 & Linkify CDN -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/linkifyjs@4.1.1/dist/linkify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/linkify-html@4.1.1/dist/linkify-html.min.js"></script>
@@ -13,25 +12,29 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f9; }
     #calendar { max-width: 1100px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     
-    /* 彈窗樣式 */
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
     .modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 550px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #333; }
     .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-    .form-group textarea { height: 100px; resize: vertical; }
+    .form-group textarea { height: 90px; resize: vertical; }
     
-    /* 多選人員框樣式 */
     .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; }
     .checkbox-item { display: flex; align-items: center; font-weight: normal; margin: 0; cursor: pointer; }
     .checkbox-item input { width: auto; margin-right: 5px; }
 
-    .btn-group { text-align: right; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
+    /* 顏色選擇區塊 */
+    .color-picker { display: flex; gap: 10px; margin-top: 5px; }
+    .color-option { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+    .color-option.selected { border-color: #333; transform: scale(1.15); }
+
+    .btn-group { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
     .btn { padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
     .btn-primary { background: #007bff; color: white; }
-    .btn-secondary { background: #6c757d; color: white; margin-right: 8px; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
     
-    .fc-event { cursor: pointer; border-radius: 4px; padding: 2px 4px; }
+    .fc-event { cursor: pointer; border-radius: 4px; padding: 2px 4px; border: none !important; }
     .detail-row { margin-bottom: 12px; font-size: 15px; }
     .detail-label { font-weight: bold; color: #555; display: inline-block; width: 100px; }
     .desc-box { background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #007bff; margin-top: 8px; white-space: pre-wrap; word-break: break-all; }
@@ -41,11 +44,13 @@
 
   <div id="calendar"></div>
 
-  <!-- 新增事件彈窗 -->
+  <!-- 新增/編輯事件彈窗 -->
   <div id="eventModal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-top:0;">新增團隊工作事項</h3>
+      <h3 id="formModalTitle" style="margin-top:0;">新增團隊工作事項</h3>
       <form id="eventForm">
+        <input type="hidden" id="eventId">
+
         <div class="form-group">
           <label>派單人員（誰建立的）</label>
           <select id="creator" required><option value="">載入中...</option></select>
@@ -64,6 +69,19 @@
         <div class="form-group">
           <label>詳細內容（包含網址可自動轉超連結）</label>
           <textarea id="eventDesc" placeholder="請輸入詳細說明，或貼上會議 / Google 文件網址..."></textarea>
+        </div>
+
+        <!-- 顏色選擇 -->
+        <div class="form-group">
+          <label>事件顏色標記</label>
+          <div class="color-picker">
+            <div class="color-option selected" style="background:#007bff;" data-color="#007bff" onclick="selectColor('#007bff', this)"></div>
+            <div class="color-option" style="background:#28a745;" data-color="#28a745" onclick="selectColor('#28a745', this)"></div>
+            <div class="color-option" style="background:#dc3545;" data-color="#dc3545" onclick="selectColor('#dc3545', this)"></div>
+            <div class="color-option" style="background:#ffc107;" data-color="#ffc107" onclick="selectColor('#ffc107', this)"></div>
+            <div class="color-option" style="background:#6f42c1;" data-color="#6f42c1" onclick="selectColor('#6f42c1', this)"></div>
+            <div class="color-option" style="background:#fd7e14;" data-color="#fd7e14" onclick="selectColor('#fd7e14', this)"></div>
+          </div>
         </div>
 
         <div style="display: flex; gap: 15px;">
@@ -95,7 +113,7 @@
     </div>
   </div>
 
-  <!-- 檢視事件彈窗 -->
+  <!-- 檢視事件彈窗（帶有編輯與刪除按鈕） -->
   <div id="viewModal" class="modal">
     <div class="modal-content">
       <h3 id="viewTitle" style="margin-top:0; color:#007bff;">事項詳情</h3>
@@ -106,7 +124,11 @@
       <div id="viewDesc" class="desc-box"></div>
       
       <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="closeViewModal()">關閉</button>
+        <button type="button" class="btn btn-danger" onclick="deleteCurrentEvent()">刪除/取消事件</button>
+        <div>
+          <button type="button" class="btn btn-secondary" style="margin-right:8px;" onclick="editCurrentEvent()">編輯事件</button>
+          <button type="button" class="btn btn-primary" onclick="closeViewModal()">關閉</button>
+        </div>
       </div>
     </div>
   </div>
@@ -116,8 +138,10 @@
 
     let selectedStartStr = "";
     let selectedEndStr = "";
+    let selectedColorHex = "#007bff";
     let calendar;
     let teamMembers = [];
+    let currentActiveEvent = null;
 
     document.addEventListener('DOMContentLoaded', function() {
       fetchMembers();
@@ -144,6 +168,7 @@
                 title: `[${evt.creator || '未定'} ➔ ${evt.assignees || '所有人'}] ${evt.title}`,
                 start: evt.start,
                 end: evt.end,
+                backgroundColor: evt.color || '#007bff',
                 extendedProps: evt
               }));
               successCallback(formatted);
@@ -154,20 +179,19 @@
         select: function(info) {
           selectedStartStr = info.startStr;
           selectedEndStr = info.endStr;
-          openModal();
+          openModalForCreate();
         },
 
         eventClick: function(info) {
-          const props = info.event.extendedProps;
-          document.getElementById('viewTitle').innerText = props.title;
-          document.getElementById('viewCreator').innerText = props.creator || '未指定';
-          document.getElementById('viewAssignees').innerText = props.assignees || '未指定';
+          currentActiveEvent = info.event.extendedProps;
+          document.getElementById('viewTitle').innerText = currentActiveEvent.title;
+          document.getElementById('viewCreator').innerText = currentActiveEvent.creator || '未指定';
+          document.getElementById('viewAssignees').innerText = currentActiveEvent.assignees || '未指定';
           
-          let remText = props.needReminder === 'YES' ? `是 (前 ${props.reminderMinutes} 分鐘)` : '否';
+          let remText = currentActiveEvent.needReminder === 'YES' ? `是 (前 ${currentActiveEvent.reminderMinutes} 分鐘)` : '否';
           document.getElementById('viewReminder').innerText = remText;
 
-          // 網址自動超連結
-          const descHtml = linkifyHtml(props.description || '無詳細說明', { target: '_blank' });
+          const descHtml = linkifyHtml(currentActiveEvent.description || '無詳細說明', { target: '_blank' });
           document.getElementById('viewDesc').innerHTML = descHtml;
 
           document.getElementById('viewModal').style.display = 'flex';
@@ -183,15 +207,13 @@
         .then(data => {
           teamMembers = data;
           
-          // 渲染派單人下拉選單
           const creatorSelect = document.getElementById('creator');
           creatorSelect.innerHTML = '<option value="">-- 請選擇派單人 --</option>' + 
             teamMembers.map(m => `<option value="${m}">${m}</option>`).join('');
 
-          // 渲染處理人多選核取方塊 (Checkbox)
           const assigneesContainer = document.getElementById('assigneesContainer');
           if (teamMembers.length === 0) {
-            assigneesContainer.innerHTML = '<em>請先至 Google 試算表 Members 分頁新增成員</em>';
+            assigneesContainer.innerHTML = '<em>讀取中，或請確定試算表 Members 分頁 A 欄有填寫名單</em>';
           } else {
             assigneesContainer.innerHTML = teamMembers.map(m => `
               <label class="checkbox-item">
@@ -202,23 +224,82 @@
         });
     }
 
-    function openModal() { document.getElementById('eventModal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('eventModal').style.display = 'none'; document.getElementById('eventForm').reset(); }
+    function selectColor(color, el) {
+      selectedColorHex = color;
+      document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function openModalForCreate() {
+      document.getElementById('eventId').value = "";
+      document.getElementById('formModalTitle').innerText = "新增團隊工作事項";
+      document.getElementById('eventForm').reset();
+      selectColor('#007bff', document.querySelectorAll('.color-option')[0]);
+      document.getElementById('eventModal').style.display = 'flex';
+    }
+
+    function editCurrentEvent() {
+      closeViewModal();
+      const evt = currentActiveEvent;
+      document.getElementById('eventId').value = evt.id;
+      document.getElementById('formModalTitle').innerText = "編輯工作事項";
+      document.getElementById('creator').value = evt.creator || "";
+      document.getElementById('eventTitle').value = evt.title || "";
+      document.getElementById('eventDesc').value = evt.description || "";
+      document.getElementById('needReminder').value = evt.needReminder || "YES";
+      document.getElementById('reminderMinutes').value = evt.reminderMinutes || "15";
+
+      // 勾選多選人員
+      const assigneesArr = (evt.assignees || "").split(', ');
+      document.querySelectorAll('input[name="assigneeCb"]').forEach(cb => {
+        cb.checked = assigneesArr.includes(cb.value);
+      });
+
+      // 選取顏色
+      const colorTarget = document.querySelector(`.color-option[data-color="${evt.color}"]`) || document.querySelectorAll('.color-option')[0];
+      selectColor(evt.color || '#007bff', colorTarget);
+
+      document.getElementById('eventModal').style.display = 'flex';
+    }
+
+    function deleteCurrentEvent() {
+      if(!confirm(`確定要刪除/取消「${currentActiveEvent.title}」這項任務嗎？`)) return;
+      
+      closeViewModal();
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', id: currentActiveEvent.id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.status === "success") {
+          calendar.refetchEvents();
+        } else {
+          alert("刪除失敗：" + data.message);
+        }
+      });
+    }
+
+    function closeModal() { document.getElementById('eventModal').style.display = 'none'; }
     function closeViewModal() { document.getElementById('viewModal').style.display = 'none'; }
 
-    // 送出新增表單
+    // 處理表單提交（新增或編輯）
     document.getElementById('eventForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
+      const eventId = document.getElementById('eventId').value;
       const selectedAssignees = Array.from(document.querySelectorAll('input[name="assigneeCb"]:checked')).map(cb => cb.value);
 
       const payload = {
+        action: eventId ? 'update' : 'create',
+        id: eventId,
         creator: document.getElementById('creator').value,
         assignees: selectedAssignees,
         title: document.getElementById('eventTitle').value,
         description: document.getElementById('eventDesc').value,
         needReminder: document.getElementById('needReminder').value === 'YES',
         reminderMinutes: document.getElementById('reminderMinutes').value,
+        color: selectedColorHex,
         start: selectedStartStr,
         end: selectedEndStr
       };
@@ -234,7 +315,7 @@
         if(data.status === "success") {
           calendar.refetchEvents();
         } else {
-          alert("儲存失敗：" + data.message);
+          alert("操作失敗：" + data.message);
         }
       })
       .catch(err => alert("發送錯誤：" + err));
